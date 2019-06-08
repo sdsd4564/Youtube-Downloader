@@ -8,5 +8,5 @@ WPF 앱입니다.
 FFmpeg : https://ffmpeg.org/
 Youtube-dl : https://youtube-dl.org/downloads/latest/youtube-dl.exe
 
-![InitialScene]("./Youtube Downloader/Resources/1.png")
-![ResultScene]("./Youtube Downloader/Resources/2.PNG")
+![InitialScene](./Youtube&#32;Downloader/Resources/1.png)
+![ResultScene](./Youtube&#32;Downloader/Resources/2.PNG)
