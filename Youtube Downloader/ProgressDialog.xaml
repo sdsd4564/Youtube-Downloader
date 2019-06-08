@@ -1,0 +1,23 @@
+﻿<Window
+    x:Class="Youtube_Downloader.ProgressDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Youtube_Downloader"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="처리 중..."
+    Width="750"
+    Height="450"
+    ResizeMode="NoResize"
+    mc:Ignorable="d">
+    <Grid>
+        <ScrollViewer Name="scvScroll" Width="Auto">
+            <TextBlock
+                Name="tbxProcess"
+                Background="WhiteSmoke"
+                TextAlignment="Left"
+                TextTrimming="None"
+                TextWrapping="WrapWithOverflow" />
+        </ScrollViewer>
+    </Grid>
+</Window>
