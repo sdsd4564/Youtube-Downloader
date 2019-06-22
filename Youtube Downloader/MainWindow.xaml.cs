@@ -33,6 +33,10 @@ namespace Youtube_Downloader
                 MessageBox.Show("youtube-dl 또는 ffmpeg 파일이 존재하지 않습니다.", "NO FILES");
                 Application.Current.Shutdown();
             }
+            else
+            {
+                _ = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "--update", TIEMOUT);
+            }
 
             // Youtube 정보 받아오기 Button Click
             btnUrl.Click += async (sender, e) =>
