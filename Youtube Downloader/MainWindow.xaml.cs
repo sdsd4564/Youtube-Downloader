@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MahApps.Metro.Controls;
+using MahApps.Metro.Controls.Dialogs;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -12,13 +14,15 @@ using Youtube_Downloader.Model;
 
 namespace Youtube_Downloader
 {
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : MetroWindow, INotifyPropertyChanged
     {
         // youtube-dl argument용
         private string url = string.Empty;
 
         // 영상 정보 받아오기 타임아웃 시간
         private readonly int TIEMOUT = 60000;
+
+        private Task updateProcess;
 
         public MainWindow()
         {
@@ -28,19 +32,25 @@ namespace Youtube_Downloader
             string youtubeDl = Path.Combine("./", "youtube-dl.exe");
             string ffmpeg = Path.Combine("./", "ffmpeg.exe");
 
-            if (!File.Exists("./youtube-dl") && !File.Exists("./ffmpeg.exe"))
+            if (!File.Exists("./youtube-dl.exe") || !File.Exists("./ffmpeg.exe"))
             {
                 MessageBox.Show("youtube-dl 또는 ffmpeg 파일이 존재하지 않습니다.", "NO FILES");
                 Application.Current.Shutdown();
             }
             else
             {
-                _ = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "--update", TIEMOUT);
+                //var dialog = this.ShowProgressAsync("Update binary", "Please wait...");
+                updateProcess = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "--update", TIEMOUT);
+                //updateProcess.ContinueWith((t) => dialog.Result.CloseAsync());
             }
 
             // Youtube 정보 받아오기 Button Click
             btnUrl.Click += async (sender, e) =>
             {
+                // youtube-dl 업데이트 작업 시 이벤트 취소
+                if (!updateProcess.IsCompleted)
+                    return;
+
                 // Only Access URL Form
                 Regex regex = new Regex("^http(s)?://([\\w-]+.)+[\\w-]+(/[\\w- ./?%&=])?$");
                 if (!regex.IsMatch(tbxUrl.Text))
@@ -88,11 +98,17 @@ namespace Youtube_Downloader
                             if (string.IsNullOrEmpty(line))
                                 break;
 
-                            if (line.Contains("video only"))
+                            if (line.Contains("video"))
                                 VideoFormats.Add(new YoutubeFileFormat(Model.Type.VideoFormat, line));
                             else if (line.Contains("audio only"))
                                 AudioFormats.Add(new YoutubeFileFormat(Model.Type.AudioFormat, line));
                         }
+
+                        //cbAudioFormat.IsEnabled = AudioFormats.Count != 1;
+                        //cbVideoFormat.IsEnabled = VideoFormats.Count != 1;
+
+                        cbAudioFormat.IsHitTestVisible = AudioFormats.Count != 1;
+                        cbVideoFormat.IsHitTestVisible = VideoFormats.Count != 1;
 
                         // 읽어온 영상 정보의 url을 저장
                         url = tbxUrl.Text;
@@ -117,8 +133,15 @@ namespace Youtube_Downloader
                 StringBuilder sb = new StringBuilder();
 
                 // 오디오 파일받기
+
                 if (rdAudio.IsChecked.Value)
                 {
+                    if (AudioFormats.Count == 1)
+                    {
+                        MessageBox.Show("해당 영상의 오디오 포맷이 존재하지 않습니다.", "ERROR", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
                     sb.Append("-f bestaudio --extract-audio --audio-format mp3 --audio-quality 0 ") // 오디오 추출 arg
                     .Append("-o " + DownloadPath + "/%(title)s.%(ext)s ") // 다운로드 경로
                     .Append("--ffmpeg-location ./ffmpeg.exe ") // ffmpeg bin 경로 arg
@@ -127,15 +150,21 @@ namespace Youtube_Downloader
                 // 비디오 파일받기
                 else if (rdVideo.IsChecked.Value)
                 {
-                    if (cbVideoFormat.SelectedIndex == 0 || cbAudioFormat.SelectedIndex == 0)
+                    if ((cbVideoFormat.SelectedIndex == 0 && VideoFormats.Count != 1)
+                        || (cbAudioFormat.SelectedIndex == 0 && AudioFormats.Count != 1))
                     {
-                        MessageBox.Show("비디오 또는 오디오 포맷이 선택되지 않았습니다.", "ERROR");
+                        MessageBox.Show("비디오 또는 오디오 포맷이 선택되지 않았습니다.", "ERROR", MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
+
                     var videoFormat = (YoutubeFileFormat)cbVideoFormat.SelectedItem;
                     var audioFormat = (YoutubeFileFormat)cbAudioFormat.SelectedItem;
 
-                    sb.Append("-f " + videoFormat.FormatNumber + "+" + audioFormat.FormatNumber)
+                    var strFormat = (VideoFormats.Count == 1 ? string.Empty : "-f " + videoFormat.FormatNumber) 
+                                    + (AudioFormats.Count == 1 ? string.Empty : "+" + audioFormat.FormatNumber);
+
+                    //sb.Append("-f " + videoFormat.FormatNumber + (AudioFormats.Count == 1 ? string.Empty : "+" + audioFormat.FormatNumber) )
+                    sb.Append(strFormat)
                     .Append(" -o " + DownloadPath + "/%(title)s.%(ext)s") // 다운로드 경로
                     .Append(" --ffmpeg-location ./ffmpeg.exe") // ffmpeg bin 경로 arg
                     .Append(" --merge-output-format mkv ")
@@ -197,7 +226,7 @@ namespace Youtube_Downloader
                 RepeatBehavior = new RepeatBehavior(3),
             };
 
-            BeginAnimation(Window.LeftProperty, animation);
+            BeginAnimation(LeftProperty, animation);
         }
 
         #endregion Window Animation

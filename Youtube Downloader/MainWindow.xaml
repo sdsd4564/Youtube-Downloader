@@ -1,4 +1,4 @@
-﻿<Window
+﻿<metro:MetroWindow
     x:Class="Youtube_Downloader.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -13,10 +13,10 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="1.2*" />
+            <RowDefinition Height="0.9*" />
             <RowDefinition Height="0.7*" />
-            <RowDefinition Height="2*" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="1.3*" />
+            <RowDefinition Height="0.9*" />
         </Grid.RowDefinitions>
 
         <DockPanel Margin="6" HorizontalAlignment="Center">
@@ -30,41 +30,40 @@
                     FontStyle="Italic"
                     FontWeight="Bold"
                     Text="GITHUB" />
-                <TextBlock FontSize="14" Text=" https://github.com/sdsd4564/Youtube-Downloader" />
+                <TextBlock FontSize="14" Text="  https://github.com/sdsd4564/Youtube-Downloader" />
                 <TextBlock
                     Margin="0,2,0,0"
                     FontSize="11"
                     FontStyle="Italic"
                     FontWeight="Bold"
                     Text="BLOG" />
-                <TextBlock FontSize="14" Text=" https://blog-encho.duckdns.org" />
+                <TextBlock FontSize="14" Text="  https://blog-encho.duckdns.org" />
             </StackPanel>
         </DockPanel>
 
-        <DockPanel
+        <StackPanel
             Grid.Row="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
-            <TextBlock
-                HorizontalAlignment="Center"
-                DockPanel.Dock="Top"
-                Text="다운로드 경로" />
+            <TextBlock HorizontalAlignment="Center" Text="다운로드 경로" />
             <TextBlock
                 Margin="0,0,0,6"
                 HorizontalAlignment="Center"
-                DockPanel.Dock="Top"
                 FontStyle="Italic"
                 Text="{Binding DownloadPath}" />
-            <TextBlock Text="URL" />
-            <TextBox
-                Name="tbxUrl"
-                Width="400"
-                Margin="12,0,2,0" />
-            <Button
-                Name="btnUrl"
-                Width="30"
-                Content="GET" />
-        </DockPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="URL" />
+                <TextBox
+                    Name="tbxUrl"
+                    Width="400"
+                    Margin="12,0,2,0"
+                    metro:TextBoxHelper.ClearTextButton="True" />
+                <Button
+                    Name="btnUrl"
+                    Width="30"
+                    Content="GET" />
+            </StackPanel>
+        </StackPanel>
         <Border
             Grid.Row="2"
             Margin="12"
@@ -106,13 +105,13 @@
                 <RadioButton
                     Name="rdAudio"
                     Margin="4"
-                    Content="Audio(.mp3)"
+                    Content="Audio"
                     DockPanel.Dock="Top"
                     IsChecked="True" />
                 <RadioButton
                     Name="rdVideo"
                     Margin="4"
-                    Content="Video(.mkv)"
+                    Content="Video"
                     DockPanel.Dock="Top" />
                 <ComboBox
                     Name="cbVideoFormat"
@@ -131,7 +130,7 @@
             </StackPanel>
             <Button
                 Name="btnDown"
-                Width="100"
+                Width="120"
                 Height="35"
                 Content="Donwload"
                 DockPanel.Dock="Bottom"
@@ -139,4 +138,4 @@
                 FontWeight="Bold" />
         </DockPanel>
     </Grid>
-</Window>
+</metro:MetroWindow>

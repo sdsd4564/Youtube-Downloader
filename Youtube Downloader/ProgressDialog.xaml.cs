@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace Youtube_Downloader
 {
@@ -6,14 +9,21 @@ namespace Youtube_Downloader
     {
         public static ProgressDialog Instance;
 
+        public Task<ProcessAsyncHelper.ProcessResult> process;
+
         public ProgressDialog(string arg)
         {
             Instance = this;
 
             // 다운로드 실행
-            _ = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", arg, 600000);
+            process = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", arg, 600000);
 
             InitializeComponent();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
         }
     }
 }
