@@ -1,11 +1,12 @@
-﻿using System;
-using System.Threading;
+﻿using MahApps.Metro.Controls;
+using MahApps.Metro.Controls.Dialogs;
+using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace Youtube_Downloader
 {
-    public partial class ProgressDialog : Window
+    public partial class ProgressDialog : MetroWindow
     {
         public static ProgressDialog Instance;
 
@@ -21,9 +22,18 @@ namespace Youtube_Downloader
             InitializeComponent();
         }
 
-        protected override void OnClosed(EventArgs e)
+        protected override void OnClosing(CancelEventArgs e)
         {
-            base.OnClosed(e);
+            if (!process.IsCompleted)
+            {
+                var message = this.ShowModalMessageExternal("Stop", "해당 파일을 받고 있습니다. 종료할까요?", MessageDialogStyle.AffirmativeAndNegative);
+                if (message == MessageDialogResult.Affirmative)
+                    ProcessAsyncHelper.StopProcess();
+                else
+                    e.Cancel = true;
+            }
+
+            base.OnClosing(e);
         }
     }
 }

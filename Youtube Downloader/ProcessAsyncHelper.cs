@@ -1,18 +1,30 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Youtube_Downloader;
 
-// https://gist.github.com/AlexMAS/276eed492bc989e13dcce7c78b9e179d 참조
+/// https://gist.github.com/AlexMAS/276eed492bc989e13dcce7c78b9e179d 참조
 public static class ProcessAsyncHelper
 {
+    private static CancellationTokenSource tokenSource;
+
+    public static void StopProcess() 
+    {
+        if (tokenSource != null)
+            tokenSource.Cancel();
+    }
+
     public static async Task<ProcessResult> RunProcessAsync(string command, string arguments, int timeout)
     {
         var result = new ProcessResult();
         var dialog = ProgressDialog.Instance;
 
+        using (tokenSource = new CancellationTokenSource())
         using (var process = new Process())
         {
+            var token = tokenSource.Token;
+
             process.StartInfo.FileName = command;
             process.StartInfo.Arguments = arguments;
             process.StartInfo.UseShellExecute = false;
@@ -24,21 +36,31 @@ public static class ProcessAsyncHelper
 
             process.OutputDataReceived += (s, e) =>
             {
-                if (e.Data == null)
+                try
                 {
-                    outputCloseEvent.SetResult(true);
-                }
-                else
-                {
-                    if (dialog != null)
+                    token.ThrowIfCancellationRequested();
+
+                    if (e.Data == null)
                     {
-                        dialog.Dispatcher.Invoke(() =>
-                        {
-                            dialog.tbxProcess.Text += e.Data + "\t\n";
-                            dialog.scvScroll.ScrollToEnd();
-                        });
+                        outputCloseEvent.SetResult(true);
                     }
-                    outputBuilder.AppendLine(e.Data);
+                    else
+                    {
+                        if (dialog != null)
+                        {
+                            dialog.Dispatcher.Invoke(() =>
+                            {
+                                dialog.tbxProcess.Text += e.Data + "\t\n";
+                                dialog.scvScroll.ScrollToEnd();
+                            });
+                        }
+                        outputBuilder.AppendLine(e.Data);
+                    }
+                }
+                catch
+                {
+                    if (!process.HasExited)
+                        process.Kill();
                 }
             };
 
@@ -79,6 +101,8 @@ public static class ProcessAsyncHelper
                 }
             }
         }
+
+        tokenSource = null;
 
         return result;
     }
