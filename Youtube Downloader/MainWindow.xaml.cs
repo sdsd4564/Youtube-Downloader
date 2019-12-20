@@ -4,12 +4,14 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using Youtube_Downloader.Model;
@@ -18,16 +20,25 @@ namespace Youtube_Downloader
 {
     public partial class MainWindow : MetroWindow, INotifyPropertyChanged
     {
+        [DllImport("gdi32")]
+        private static extern int DeleteObject(IntPtr o);
+
         // youtube-dl argument용
         private string url = string.Empty;
+
+        private string youtubeDl = string.Empty;
+        private string ffmpeg = string.Empty;
 
         // 영상 정보 받아오기 타임아웃 시간
         private readonly int TIEMOUT = 60000;
 
         private Task updateProcess;
 
-        // 파일 다운로드 경로(C:/User/Download 고정)
-        public string DownloadPath { get; } = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\Downloads";
+        // 파일 다운로드 경로
+        public string DownloadPath
+        {
+            get => ((App)Application.Current).GetConfig("DownloadPath");
+        }
 
         // ComboBox용 비디오 및 오디오 포맷목록(Binding)
         public ObservableCollection<YoutubeFileFormat> VideoFormats { get; set; } = new ObservableCollection<YoutubeFileFormat>();
@@ -39,18 +50,17 @@ namespace Youtube_Downloader
             InitializeComponent();
             DataContext = this;
 
-            string youtubeDl = Path.Combine("./", "youtube-dl.exe");
-            string ffmpeg = Path.Combine("./", "ffmpeg.exe");
+            youtubeDl = ((App)Application.Current).YoutubeDlPath;
+            ffmpeg = ((App)Application.Current).FFmpegPath;
 
-            if (!File.Exists("./youtube-dl.exe") || !File.Exists("./ffmpeg.exe"))
+            if (!File.Exists(youtubeDl) || !File.Exists(ffmpeg))
             {
                 MessageBox.Show("youtube-dl 또는 ffmpeg 파일이 존재하지 않습니다.", "NO FILES");
                 Application.Current.Shutdown();
             }
             else
             {
-                //var dialog = this.ShowProgressAsync("Update binary", "Please wait...");
-                updateProcess = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "--update", TIEMOUT);
+                updateProcess = ProcessAsyncHelper.RunProcessAsync(youtubeDl, "--update", TIEMOUT);
                 updateProcess.ContinueWith((t) =>
                     Dispatcher.Invoke(() =>
                     {
@@ -59,11 +69,22 @@ namespace Youtube_Downloader
                     }));
             }
 
+            tbxUrl.Focus();
+            btnDownloadPath.Click += SetDownloadPath;
             btnUrl.Click += GetUrlInfoClick;
             btnDown.Click += DownloadVideo;
         }
 
         #region Event
+
+        private void SetDownloadPath(object sender, RoutedEventArgs e)
+        {
+            var fd = new System.Windows.Forms.FolderBrowserDialog();
+            fd.ShowDialog();
+
+            ((App)Application.Current).SetConfig("DownloadPath", fd.SelectedPath);
+            OnPropertyChanged("DownloadPath");
+        }
 
         /// Youtube 정보 받아오기 Button Click
         private async void GetUrlInfoClick(object sender, RoutedEventArgs e)
@@ -84,6 +105,7 @@ namespace Youtube_Downloader
             try
             {
                 IsProgress(true);
+                url = tbxUrl.Text;
 
                 // 비디오 및 오디오 포맷 목록 초기화
                 VideoFormats.Clear();
@@ -97,8 +119,8 @@ namespace Youtube_Downloader
                 // youtube-dl.exe 프로세스 실행
                 // 1. 영상의 썸네일, 제목을 받아옴(youtube-dl --get-thumbnail --get-title <url>)
                 // 2. 영상의 포맷 목록을 받아옴(youtube-dl -F <url>)
-                var result = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "--get-thumbnail --get-title " + tbxUrl.Text, TIEMOUT);
-                var formats = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", "-F " + tbxUrl.Text, TIEMOUT);
+                var result = ProcessAsyncHelper.RunProcessAsync(youtubeDl, "-R 10 --get-thumbnail --get-title " + tbxUrl.Text, 8000);
+                var formats = ProcessAsyncHelper.RunProcessAsync(youtubeDl, "-R 10 -F " + tbxUrl.Text, 8000);
                 var processTask = Task.WhenAll(result, formats);
 
                 // Timeout이 발생하기 전 태스크가 processTask & 두 프로세스 리턴값이 not null에 해당
@@ -109,8 +131,26 @@ namespace Youtube_Downloader
                     StringReader info = new StringReader(result.Result.Output);
                     StringReader format = new StringReader(formats.Result.Output);
 
-                    tblTitle.Text = info.ReadLine();
-                    imgThumbnail.Source = GetThumbnail(info.ReadLine());
+                    var noData = @"No Received Information";
+                    tblTitle.Text = info.ReadLine() ?? noData;
+                    if (tblTitle.Text.Equals(noData))
+                    {
+                        dpForm.IsEnabled = false;
+                        imgThumbnail.Source = LoadDefaultImage();
+                        return;
+                    }
+
+                    // 영상 썸네일 다운로드 작업
+                    try
+                    {
+                        var task = GetThumbnail(info.ReadLine()).ContinueWith((t) =>
+                        { imgThumbnail.Dispatcher.Invoke(() => imgThumbnail.Source = t.Result); });
+
+                        // 이미지 다운로드 작업이 지연시간동안 완료되지 않으면 기본 이미지 로드
+                        if (await Task.WhenAny(Task.Delay(8000), task) != task)
+                            throw task.Exception;
+                    }
+                    catch { imgThumbnail.Source = LoadDefaultImage(); }
 
                     while (true)
                     {
@@ -125,14 +165,10 @@ namespace Youtube_Downloader
                             AudioFormats.Add(new YoutubeFileFormat(Model.Type.AudioFormat, line));
                     }
 
-                    //cbAudioFormat.IsEnabled = AudioFormats.Count != 1;
-                    //cbVideoFormat.IsEnabled = VideoFormats.Count != 1;
-
                     cbAudioFormat.IsHitTestVisible = AudioFormats.Count != 1;
                     cbVideoFormat.IsHitTestVisible = VideoFormats.Count != 1;
 
                     // 읽어온 영상 정보의 url을 저장
-                    url = tbxUrl.Text;
                     OnPropertyChanged("VideoFormats");
                     OnPropertyChanged("AudioFormats");
                 }
@@ -154,7 +190,6 @@ namespace Youtube_Downloader
             StringBuilder sb = new StringBuilder();
 
             // 오디오 파일받기
-
             if (rdAudio.IsChecked.Value)
             {
                 if (AudioFormats.Count == 1)
@@ -162,11 +197,8 @@ namespace Youtube_Downloader
                     MessageBox.Show("해당 영상의 오디오 포맷이 존재하지 않습니다.", "ERROR", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-
-                sb.Append("-f bestaudio --extract-audio --audio-format mp3 --audio-quality 0 ") // 오디오 추출 arg
-                .Append("-o " + DownloadPath + "/%(title)s.%(ext)s ") // 다운로드 경로
-                .Append("--ffmpeg-location ./ffmpeg.exe ") // ffmpeg bin 경로 arg
-                .Append(url); // url
+                // 오디오 추출 arg
+                sb.Append("-f bestaudio --extract-audio --audio-format mp3 --audio-quality 0 ");
             }
             // 비디오 파일받기
             else if (rdVideo.IsChecked.Value)
@@ -181,16 +213,22 @@ namespace Youtube_Downloader
                 var videoFormat = (YoutubeFileFormat)cbVideoFormat.SelectedItem;
                 var audioFormat = (YoutubeFileFormat)cbAudioFormat.SelectedItem;
 
-                var strFormat = (VideoFormats.Count == 1 ? string.Empty : "-f " + videoFormat.FormatNumber)
+                var strFormat = (VideoFormats.Count == 1 ? string.Empty : videoFormat.FormatNumber)
                                 + (AudioFormats.Count == 1 ? string.Empty : "+" + audioFormat.FormatNumber);
+                strFormat = strFormat.TrimStart('+');
 
-                //sb.Append("-f " + videoFormat.FormatNumber + (AudioFormats.Count == 1 ? string.Empty : "+" + audioFormat.FormatNumber) )
-                sb.Append(strFormat)
-                .Append(" -o " + DownloadPath + "/%(title)s.%(ext)s") // 다운로드 경로
-                .Append(" --ffmpeg-location ./ffmpeg.exe") // ffmpeg bin 경로 arg
-                .Append(" --merge-output-format mkv ")
-                .Append(url);
+                sb.Append(string.IsNullOrEmpty(strFormat) ? "" : "-f " + strFormat)
+                .Append(" --merge-output-format mkv ");
             }
+            else if (rdPrefer.IsChecked.Value)
+            {
+                sb.Append("--prefer-free-formats ");
+            }
+
+            sb.Append("-o " + DownloadPath + "/%(title)s.%(ext)s "); // 다운로드 경로
+            sb.Append("--ffmpeg-location \"" + ffmpeg + "\" ");
+            sb.Append("-R 10 ");
+            sb.Append(url);
 
             ProgressDialog dialog = new ProgressDialog(sb.ToString()) { Owner = this };
             IsEnabled = false;
@@ -219,16 +257,39 @@ namespace Youtube_Downloader
 
         #endregion Event
 
-        #region Thumbnail 만들기
+        #region Thumbnail, 기본 이미지 로딩
 
-        public BitmapImage GetThumbnail(string url)
+        public static Task<BitmapSource> GetThumbnail(string url)
         {
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(url, UriKind.RelativeOrAbsolute);
-            image.EndInit();
+            var uri = new Uri(url, UriKind.RelativeOrAbsolute);
+            var tcs = new TaskCompletionSource<BitmapSource>();
 
-            return image;
+            BitmapImage image = new BitmapImage(uri);
+            if (image.IsDownloading)
+            {
+                image.DownloadCompleted += (sender, e) => tcs.SetResult(image);
+                image.DownloadFailed += (sender, e) => tcs.SetException(e.ErrorException);
+            }
+            else
+                tcs.SetResult(image);
+
+            return tcs.Task;
+        }
+
+        public static BitmapSource LoadDefaultImage()
+        {
+            BitmapSource bs;
+            var ip = Properties.Resources.frame_landscape.GetHbitmap();
+            try
+            {
+                bs = Imaging.CreateBitmapSourceFromHBitmap(ip, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            }
+            finally
+            {
+                DeleteObject(ip);
+            }
+
+            return bs;
         }
 
         #endregion Thumbnail 만들기
@@ -269,7 +330,5 @@ namespace Youtube_Downloader
         }
 
         #endregion PropertyChanged
-
-        
     }
 }

@@ -9,7 +9,7 @@ public static class ProcessAsyncHelper
 {
     private static CancellationTokenSource tokenSource;
 
-    public static void StopProcess() 
+    public static void StopProcess()
     {
         if (tokenSource != null)
             tokenSource.Cancel();
@@ -39,7 +39,6 @@ public static class ProcessAsyncHelper
                 try
                 {
                     token.ThrowIfCancellationRequested();
-
                     if (e.Data == null)
                     {
                         outputCloseEvent.SetResult(true);

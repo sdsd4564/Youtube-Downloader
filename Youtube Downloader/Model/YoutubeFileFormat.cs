@@ -24,14 +24,18 @@ namespace Youtube_Downloader.Model
             FormatNumber = splitted[0];
 
             /// 137    mp4    1920x1080  1080p 5076k , avc1.640028, 24fps, video only, 113.44MiB
-            if (formatType == Type.VideoFormat)
-                Content = " " + splitted[2] + " " + splitted[3] + " " + splitted[4] + " " + splitted[splitted.Length - 1];
-            /// 251    webm    audio only DASH audio  158k , opus @160k, 5.34MiB
-            else if (formatType == Type.AudioFormat)
-                Content = " " + splitted[6] + " " + splitted[splitted.Length - 1];
-            /// 목록 최상단 ComboBox 헤더용
-            else if (formatType == Type.Header)
-                Content = line;
+            try
+            {
+                if (formatType == Type.VideoFormat)
+                    Content = " " + splitted[2] + " " + splitted[3] + " " + splitted[4] + " " + splitted[splitted.Length - 1];
+                /// 251    webm    audio only DASH audio  158k , opus @160k, 5.34MiB
+                else if (formatType == Type.AudioFormat)
+                    Content = " " + splitted[6] + " " + splitted[splitted.Length - 1];
+                /// 목록 최상단 ComboBox 헤더용
+                else if (formatType == Type.Header)
+                    Content = line;
+            }
+            catch { Content = line; }
         }
 
         // ComboBox Binding 표시용

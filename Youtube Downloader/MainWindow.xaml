@@ -47,7 +47,12 @@
                 Grid.Row="1"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
-                <TextBlock HorizontalAlignment="Center" Text="다운로드 경로" />
+                <Button
+                    x:Name="btnDownloadPath"
+                    HorizontalAlignment="Center"
+                    metro:ButtonHelper.CornerRadius="12"
+                    Content="다운로드 경로"
+                    Style="{DynamicResource MetroAccentButton}" />
                 <TextBlock
                     Margin="0,0,0,6"
                     HorizontalAlignment="Center"
@@ -118,34 +123,43 @@
                 <StackPanel
                     HorizontalAlignment="Center"
                     DockPanel.Dock="Top"
-                    Orientation="Horizontal">
-                    <RadioButton
-                        Name="rdAudio"
-                        Margin="4"
-                        Content="Audio"
-                        DockPanel.Dock="Top"
-                        IsChecked="True" />
-                    <RadioButton
-                        Name="rdVideo"
-                        Margin="4"
-                        Content="Video"
-                        DockPanel.Dock="Top" />
-                    <ComboBox
-                        Name="cbVideoFormat"
-                        Width="100"
-                        Margin="4,0,0,0"
-                        IsEnabled="{Binding ElementName=rdVideo, Path=IsChecked}"
-                        ItemsSource="{Binding VideoFormats}"
-                        SelectedIndex="0" />
-                    <ComboBox
-                        Name="cbAudioFormat"
-                        Width="100"
-                        Margin="8,0,0,0"
-                        IsEnabled="{Binding ElementName=rdVideo, Path=IsChecked}"
-                        ItemsSource="{Binding AudioFormats}"
-                        SelectedIndex="0" />
+                    Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton
+                            Name="rdAudio"
+                            Margin="4"
+                            Content="Audio(.mp3)"
+                            GroupName="Format"
+                            IsChecked="True" />
+                        <RadioButton
+                            x:Name="rdPrefer"
+                            Margin="4"
+                            Content="Video(Best Quality)"
+                            GroupName="Format" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton
+                            Name="rdVideo"
+                            Margin="4,4,0,4"
+                            GroupName="Format" />
+                        <ComboBox
+                            Name="cbVideoFormat"
+                            Width="100"
+                            IsEnabled="{Binding ElementName=rdVideo, Path=IsChecked}"
+                            ItemsSource="{Binding VideoFormats}"
+                            SelectedIndex="0" />
+                        <ComboBox
+                            Name="cbAudioFormat"
+                            Width="100"
+                            Margin="8,0,0,0"
+                            IsEnabled="{Binding ElementName=rdVideo, Path=IsChecked}"
+                            ItemsSource="{Binding AudioFormats}"
+                            SelectedIndex="0" />
+                    </StackPanel>
                 </StackPanel>
                 <Button
+                    HorizontalAlignment="Center"
+                    Style="{DynamicResource MetroAccentButton}"
                     Name="btnDown"
                     Width="120"
                     Height="35"

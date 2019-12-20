@@ -1,8 +1,8 @@
 ﻿using MahApps.Metro.Controls;
 using MahApps.Metro.Controls.Dialogs;
-using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Youtube_Downloader
 {
@@ -17,7 +17,8 @@ namespace Youtube_Downloader
             Instance = this;
 
             // 다운로드 실행
-            process = ProcessAsyncHelper.RunProcessAsync("./youtube-dl.exe", arg, 600000);
+            var youtubeDl = ((App)Application.Current).YoutubeDlPath;
+            process = ProcessAsyncHelper.RunProcessAsync(youtubeDl, arg, 6000000);
 
             InitializeComponent();
         }
