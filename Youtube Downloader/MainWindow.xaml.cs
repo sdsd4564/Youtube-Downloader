@@ -36,9 +36,7 @@ namespace Youtube_Downloader
 
         // 파일 다운로드 경로
         public string DownloadPath
-        {
-            get => ((App)Application.Current).GetConfig("DownloadPath");
-        }
+        { get => ((App)Application.Current).GetConfig("DownloadPath"); }
 
         // ComboBox용 비디오 및 오디오 포맷목록(Binding)
         public ObservableCollection<YoutubeFileFormat> VideoFormats { get; set; } = new ObservableCollection<YoutubeFileFormat>();
@@ -60,6 +58,7 @@ namespace Youtube_Downloader
             }
             else
             {
+                /// Youtube-dl 업데이트 진행(Asnychronous, 진행 완료 시 GET 버튼 옆 UI invisible)
                 updateProcess = ProcessAsyncHelper.RunProcessAsync(youtubeDl, "--update", TIEMOUT);
                 updateProcess.ContinueWith((t) =>
                     Dispatcher.Invoke(() =>
@@ -292,7 +291,7 @@ namespace Youtube_Downloader
             return bs;
         }
 
-        #endregion Thumbnail 만들기
+        #endregion Thumbnail, 기본 이미지 로딩
 
         #region Progress 원 표시 및 컨트롤 UI 활성
 

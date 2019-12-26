@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,7 @@ public static class ProcessAsyncHelper
                     {
                         if (dialog != null)
                         {
-                            dialog.Dispatcher.Invoke(() =>
+                            dialog.tbxProcess.Dispatcher.Invoke(() =>
                             {
                                 dialog.tbxProcess.Text += e.Data + "\t\n";
                                 dialog.scvScroll.ScrollToEnd();
@@ -56,8 +57,9 @@ public static class ProcessAsyncHelper
                         outputBuilder.AppendLine(e.Data);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine(ex.StackTrace);
                     if (!process.HasExited)
                         process.Kill();
                 }

@@ -18,7 +18,7 @@ namespace Youtube_Downloader
 
             // 다운로드 실행
             var youtubeDl = ((App)Application.Current).YoutubeDlPath;
-            process = ProcessAsyncHelper.RunProcessAsync(youtubeDl, arg, 6000000);
+            process = ProcessAsyncHelper.RunProcessAsync(youtubeDl, arg, int.MaxValue);
 
             InitializeComponent();
         }
